@@ -165,6 +165,7 @@ def extract_uuids(apk_path: str):
         apk_path (str): Path to the APK file.
         jadx_path (str): Path to the jadx executable.
     """
+    UUID_set = set()
     UUID_list = []
     base_path = None  # Initialize base_path to ensure it's available in the finally block
 
@@ -175,7 +176,8 @@ def extract_uuids(apk_path: str):
         uuid_infos = analyzer.match_uuids(base_path=base_path)
         for UUID_info in uuid_infos:
             id = UUID(UUID_info.uuid)
-            UUID_list.append(id)
+            UUID_set.add(id)
+        UUID_list = list(UUID_set)
     except Exception as e:
         logging.log(logging.ERROR, f"failed to anaylize app {os.path.basename(apk_path)} with error {e}")
     finally:
