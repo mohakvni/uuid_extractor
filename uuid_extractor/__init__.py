@@ -1,5 +1,5 @@
-from downloader import download_and_save_app
-from analyzer import extract_uuids
+from .downloader import download_and_save_app
+from .analyzer import extract_uuids
 import os
 import tempfile
 
