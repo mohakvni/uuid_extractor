@@ -4,7 +4,7 @@ import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def extract_uuids_from_apks(apks: list[str]):
+def extract_uuids_from_apks(apks: list[str]) -> dict[str, list[str]]:
     """ Main function to extract UUIDs from a list of APK URLs using multi-threading. """
     uuids = {}
     dest_dir = tempfile.mkdtemp()  # Create a temporary directory for downloads
