@@ -10,6 +10,10 @@ import subprocess
 import os
 from uuid import UUID
 import shutil
+import logging
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 @dataclass
@@ -82,7 +86,7 @@ def match_uuids(file_path: str, relative_path: Optional[str]) -> List[UUIDInfo]:
     return uuid_infos
 
 
-def decompile_apk(jadx_path: str, apk_path: str) -> str:
+def decompile_apk(apk_path: str) -> str:
     """
     Decompile an APK using jadx.
 
@@ -100,7 +104,10 @@ def decompile_apk(jadx_path: str, apk_path: str) -> str:
     else:
         output_dir_name = apk_base_name
     output_dir = os.path.join(apk_dir, output_dir_name)
-    subprocess.run(["jadx", "-d", output_dir, apk_path], check=True)
+    try:
+        subprocess.run(["jadx", "-d", output_dir, apk_path], check=True)
+    except:
+        raise Exception("JADX Not found or JADX is not properly installed")
     return output_dir
 
 
@@ -109,19 +116,19 @@ class Analyzer:
     Class representing an analyzer for extracting BLE UUID information from APK sources.
     """
 
-    def __init__(self, apk_path: str, jadx_path: str) -> None:
-        if not os.path.exists(jadx_path):
-            raise FileNotFoundError("jadx_path does not exist")
+    def __init__(self, apk_path: str) -> None:
+        # if not os.path.exists(jadx_path):
+        #     raise FileNotFoundError("jadx_path does not exist")
         if not os.path.exists(apk_path):
             raise FileNotFoundError("apk_path does not exist")
-        if not os.path.isfile(jadx_path):
-            raise FileNotFoundError("jadx_path is not a file")
+        # if not os.path.isfile(jadx_path):
+        #     raise FileNotFoundError("jadx_path is not a file")
         if not os.path.isfile(apk_path):
             raise FileNotFoundError("apk_path is not a file")
-        if not os.access(jadx_path, os.X_OK):
-            raise PermissionError("jadx_path is not executable")
+        # if not os.access(jadx_path, os.X_OK):
+        #     raise PermissionError("jadx_path is not executable")
         self.apk_path: str = apk_path
-        self.jadx_path: str = jadx_path
+        #self.jadx_path: str = jadx_path
 
     def match_uuids(self, base_path: Optional[str] = None) -> List[UUIDInfo]:
         """
@@ -130,23 +137,26 @@ class Analyzer:
         Returns:
             A list of UUIDInfo objects representing the matched UUIDs.
         """
-        all_uuid_infos = []
-        if base_path is None:
-            base_path = decompile_apk(self.jadx_path, self.apk_path)
-        sources_path = os.path.join(base_path, "sources")
+        try:
+            all_uuid_infos = []
+            if base_path is None:
+                base_path = decompile_apk(self.apk_path)
+            sources_path = os.path.join(base_path, "sources")
 
-        for root, _, files in os.walk(sources_path):
-            for file in files:
-                if not file.endswith(".java"):
-                    continue
-                file_path = os.path.join(root, file)
-                all_uuid_infos.extend(
-                    match_uuids(file_path, os.path.relpath(file_path, sources_path))
-                )
+            for root, _, files in os.walk(sources_path):
+                for file in files:
+                    if not file.endswith(".java"):
+                        continue
+                    file_path = os.path.join(root, file)
+                    all_uuid_infos.extend(
+                        match_uuids(file_path, os.path.relpath(file_path, sources_path))
+                    )
 
-        return all_uuid_infos
+            return all_uuid_infos
+        except Exception as e:
+            logging.log(logging.ERROR, f"{e}")
     
-def extract_uuids(jadx_path: str, apk_path: str):
+def extract_uuids(apk_path: str):
     """
     Extract UUIDs from a single APK and add them to the SQLite database.
     Then delete the decompiled APK folder.
@@ -159,16 +169,15 @@ def extract_uuids(jadx_path: str, apk_path: str):
     base_path = None  # Initialize base_path to ensure it's available in the finally block
 
     try:
-        print("Analyzing")
-        analyzer = Analyzer(apk_path, jadx_path)
-        base_path = decompile_apk(analyzer.jadx_path, analyzer.apk_path)  # Assign base_path
+        logging.log(logging.INFO, f"{os.path.basename(apk_path)} is being Analyzed ")
+        analyzer = Analyzer(apk_path)
+        base_path = decompile_apk(analyzer.apk_path)  # Assign base_path
         uuid_infos = analyzer.match_uuids(base_path=base_path)
-
         for UUID_info in uuid_infos:
             id = UUID(UUID_info.uuid)
             UUID_list.append(id)
     except Exception as e:
-        print(f"Failed to process {apk_path}: {e}")
+        logging.log(logging.ERROR, f"failed to anaylize app {os.path.basename(apk_path)} with error {e}")
     finally:
         if base_path:  # Check if base_path was successfully assigned
             shutil.rmtree(base_path)

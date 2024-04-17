@@ -1,15 +1,16 @@
 import io
 import logging
 from typing import Optional, BinaryIO
-import tempfile
 
 import requests
 from tqdm import tqdm
 from DrissionPage import SessionPage
 from DrissionPage.errors import ElementNotFoundError
 from urllib.parse import urlparse, urlunparse, ParseResult
-from concurrent.futures import ThreadPoolExecutor
 import os
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0",
@@ -53,7 +54,6 @@ def download_single(keywords: str) -> Optional[BinaryIO]:
     try:
         first_info = page.ele(".first-info").attr("href")
     except ElementNotFoundError as e:
-        logging.log(logging.WARNING, e)
         return
     page.get(f"{first_info}/download")
 
@@ -125,14 +125,16 @@ def download_and_save_app(app_keyword: str, dest_dir: str = None):
         app_id (str): Identifier for saving the file.
     """
     try:
+        logging.log(logging.INFO, f"Downloading {app_keyword}")
         stream = download_single(app_keyword)
         if stream:
             if dest_dir is None:
-                dest_dir = tempfile.mkdtemp() 
+                raise Exception("Destination directory not provided")
             dest_path = os.path.join(dest_dir, f'{app_keyword}.apk')
             save_file(stream, dest_path)
             return dest_path
         else:
-            print(f"Failed to download: {app_keyword}")
+            logging.log(logging.ERROR, f"App {app_keyword} not found")
+            return
     except Exception as e:
-        print(f"Error downloading {app_keyword}: {e}")
+        logging.log(logging.ERROR, e)
