@@ -19,5 +19,5 @@ pip install git+https://github.com/mohakvni/uuid_extractor.git
 ```
 import uuid_extractor
 
-uuids = extract_uuids_from_apks([<List of Applications>])
+uuids = uuid_extractor.extract_uuids_from_apks([<List of Applications>])
 ```
