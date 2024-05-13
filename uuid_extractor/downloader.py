@@ -8,6 +8,11 @@ from DrissionPage import SessionPage
 from DrissionPage.errors import ElementNotFoundError
 from urllib.parse import urlparse, urlunparse, ParseResult
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv('API_KEY')
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,6 +26,7 @@ HEADERS = {
     "Upgrade-Insecure-Requests": "1",
     "Cache-Control": "max-age=0",
 }
+
 
 def get_file_size(url: str) -> Optional[int]:
     """
@@ -37,7 +43,8 @@ def get_file_size(url: str) -> Optional[int]:
     return int(content_length) if content_length is not None else None
 
 
-def download_single(keywords: str) -> Optional[BinaryIO]:
+
+def download_single(sha256: str) -> Optional[BinaryIO]:
     """
     Download a single APK from APKPure
 
@@ -47,40 +54,8 @@ def download_single(keywords: str) -> Optional[BinaryIO]:
     Returns:
         Optional[BinaryIO]: Downloaded file pointer
     """
-    page = SessionPage()
-    keywords = "%20".join(keywords.strip().split())
-    url = f"https://apkpure.net/search?q={keywords}"
-    page.get(url)
-    try:
-        first_info = page.ele(".first-info").attr("href")
-    except ElementNotFoundError as e:
-        return
-    page.get(f"{first_info}/download")
 
-    try:
-        dismiss_btn = page.ele("#dismiss-button")
-        dismiss_btn.click()
-    except ElementNotFoundError:
-        pass
-
-    download_link = page.ele(".apk").ele(".download-btn").attr("href")
-    parsed_url = urlparse(download_link)
-
-    # Replace 'XAPK' with 'APK' in the path
-    new_path = parsed_url.path.replace('XAPK', 'APK')
-
-    # Construct the new URL with 'version=latest'
-    new_url = urlunparse(ParseResult(
-        scheme=parsed_url.scheme,
-        netloc=parsed_url.netloc,
-        path=new_path,
-        params='',
-        query='version=latest',
-        fragment=''
-    ))
-
-    download_link = new_url
-
+    download_link = f"https://androzoo.uni.lu/api/download?apikey={API_KEY}&sha256={sha256}"
     file_size = get_file_size(download_link)
 
     response = requests.get(download_link, stream=True, timeout=300, headers=HEADERS)
