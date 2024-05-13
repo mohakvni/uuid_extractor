@@ -105,7 +105,7 @@ def decompile_apk(apk_path: str) -> str:
         output_dir_name = apk_base_name
     output_dir = os.path.join(apk_dir, output_dir_name)
     try:
-        subprocess.run(["jadx", "-d", output_dir, apk_path], check=True)
+        subprocess.run(["jadx", "-r", "-d", output_dir, apk_path], check=True)
     except:
         raise Exception("JADX Not found or JADX is not properly installed")
     return output_dir
